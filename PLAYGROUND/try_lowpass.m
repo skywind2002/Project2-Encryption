@@ -20,7 +20,7 @@ a_k = [0, 1, 1, 0, 1, 0, 1]; % 要发送的比特序列
 
 %% 调制
 
-% 【非归零码】
+% 【冲激调制序列】
 s_t1 = zeros(1, length(t));
 
 for n = 1:length(a_k)
@@ -31,17 +31,17 @@ end
 
 % 时域
 figure(1); subplot(3, 1, 1);
-plot(t, s_t1); xlabel("t"); legend("非归零码");
+plot(t, s_t1); xlabel("t"); legend("冲激调制序列");
 % 频域
 figure(2); subplot(3, 1, 1);
 plot(omg, abs(FT * s_t1')); xlabel("\omega"); legend("F(s(t1))")
 
-% 【非归零码过低通】
+% 【冲激调制序列过低通】
 w_c = pi; % 下面直接用了sinc `syms x;fourier(sinc(x))` -> `(pi*heaviside(pi - w) - pi*heaviside(- w - pi))/pi`
 s_t2 = IFT * (FT * s_t1' .* (omg > -w_c & omg < w_c));
 
 figure(1); subplot(3, 1, 2);
-plot(t, real(s_t2)); xlabel("t"); legend("非归零码过低通"); % 这里imag部分比较小 毕竟是实信号的频谱做ift 加上real不警告
+plot(t, real(s_t2)); xlabel("t"); legend("冲激调制序列过低通"); % 这里imag部分比较小 毕竟是实信号的频谱做ift 加上real不警告
 figure(2); subplot(3, 1, 2);
 plot(omg, abs(FT * s_t1' .* (omg > -w_c & omg < w_c))); xlabel("\omega"); legend("F(s(t2))")
 
