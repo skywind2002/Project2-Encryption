@@ -2,8 +2,9 @@
 *.mlx
 *.mat
 .vscode/*
-playground/
+playground_yumeow/
 playground_yxj/
 playground.m
 gggMATLAB/
-__pycache__
+__pycache__/*
+data/*
