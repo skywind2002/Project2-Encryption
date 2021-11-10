@@ -4,3 +4,4 @@
 .vscode/*
 playground/
 playground.m
+__pycache__/*
