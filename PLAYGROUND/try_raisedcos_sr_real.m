@@ -57,7 +57,7 @@ figure(1); subplot(subplot_r, subplot_c, 1);
 plot(t, a_t); xlabel("t"); legend("a(t)");
 % 频域
 figure(1); subplot(subplot_r, subplot_c, 2);
-plot(omg, abs(FT * a_t')); xlabel("\omega"); legend("F(a(t))")
+plot(omg, abs(FT * a_t').^2); xlabel("\omega"); legend("F(a(t))")
 
 %% 【a(t)通过发射滤波器】
 s_t = IFT * (FT * a_t' .* sqrt(omega_raisedcos));
@@ -68,7 +68,7 @@ plot(t, s_t); xlabel("t");
 hold on; stem((1:length(a_n)) * Ts, s_t((1:length(a_n)) * precision_N + 1)); hold off;
 legend("s(t)", "采样点");
 figure(1); subplot(subplot_r, subplot_c, 4);
-plot(omg, abs(FT * s_t')); xlabel("\omega"); legend("F(s(t))")
+plot(omg, abs(FT * s_t').^2); xlabel("\omega"); legend("F(s(t))")
 
 %% 【升频】TODO 直接乘cos 注意写成复数的形式 这样之后复数也可以直接用
 
@@ -84,7 +84,7 @@ plot(t, r_t); xlabel("t");
 hold on; stem((1:length(a_n)) * Ts, r_t((1:length(a_n)) * precision_N + 1)); hold off;
 legend("r(t)", "(采样点)");
 figure(1); subplot(subplot_r, subplot_c, 6);
-plot(omg, abs(FT * r_t')); xlabel("\omega"); legend("F(r(t))")
+plot(omg, abs(FT * r_t').^2); xlabel("\omega"); legend("F(r(t))")
 
 %% 【降频】TODO 乘以cos再过理想低通 注意1/2系数？
 
@@ -97,7 +97,7 @@ plot(t, y_t); xlabel("t");
 hold on; stem((1:length(a_n)) * Ts, y_t((1:length(a_n)) * precision_N + 1)); hold off;
 legend("y(t)", "采样点");
 figure(1); subplot(subplot_r, subplot_c, 8);
-plot(omg, abs(FT * y_t')); xlabel("\omega"); legend("F(y(t))")
+plot(omg, abs(FT * y_t').^2); xlabel("\omega"); legend("F(y(t))")
 
 %% 【采样】
 y_n = zeros(1, length(a_n)); % y_n 采样得到的比特序列
