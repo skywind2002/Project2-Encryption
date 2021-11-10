@@ -1,3 +1,5 @@
+% 尝试使用sinc函数加载符号 简单的频谱分析
+
 clear;close all;clc;
 
 Ts = 1; % 采样间隔 (s)
