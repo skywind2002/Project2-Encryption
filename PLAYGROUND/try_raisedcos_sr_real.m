@@ -1,14 +1,16 @@
-% 尝试用升余弦滤波器收发实信号
+% 用升余弦滤波器收发实信号
 
 clear;close all;clc;
 
 %% parameters
 % TODO b_n -> a_n 的映射是可以调整的，也就是那些 MASK MPSK MQAM MFSK
 SNR = 20; % 给定信噪比
+% 【发送】
+a_n = [0, 1, 1, 0, 1, 0, 1, 1]; % a_n 要发送的比特序列
 
 %% constants
-f_low = 300; W_low = f_low * 2 * pi;
-f_high = 3400; W_high = f_high * 2 * pi;
+f_low = 300; omega_low = f_low * 2 * pi;
+f_high = 3400; omega_high = f_high * 2 * pi;
 W = (f_high - f_low) / 2; % W 升余弦滤波器中的W 最右边的那个点 约等于1500Hz
 alpha = 0.5;
 Ts = (alpha + 1) / 2 / W; % 采样间隔 (s)
@@ -16,28 +18,38 @@ Ts = (alpha + 1) / 2 / W; % 采样间隔 (s)
 % 这里采样间隔相当于传输两个符号之间的间隔 1s可以传2000个符号
 % 题目要求为8000bit 要在5s内传完
 % 直接传比特也是可以的 但是加上卷积码或者检错码可能就不够了
-subplot_r = 6; subplot_c = 2; % subplot作图
+subplot_r = 4; subplot_c = 2; % subplot作图
 
 %% prefourier
-t_start = 0; t_end = 0.01; precision = Ts / 16; % 时频信号MATLAB计算精度
-omega_range = [-2 * W_high, 2 * W_high]; % 这里做频域分析，至少范围要大于 ±W_high
-omega_N = 16000;
+t_start = 0; t_end = Ts * length(a_n) * 1.2;
+precision_N = 16; precision = Ts / precision_N; % 时频信号MATLAB计算精度
+omega_range = [-1.5 * omega_high, 1.5 * omega_high]; % 这里做频域分析，至少范围要大于 ±omega_high
+omega_N = 8000;
 t_range = [t_start, t_end];
 t_N = (t_end - t_start) / precision;
 [t, omg, FT, IFT] = prefourier(t_range, t_N, omega_range, omega_N);
 t = t'; % 大多使用行向量
 
 %% ——升余弦滤波器——
-% TODO
+omega_raisedcos = zeros(length(omg), 1);
 
-%% 【发送】
-a_n = [0, 1, 1, 0, 1, 0, 1, 1]; % a_n 要发送的比特序列
+for i = 1:length(omg)
+
+    if abs(omg(i)) < ((1 - alpha) / (1 + alpha) * W * 2 * pi)
+        omega_raisedcos(i) = Ts;
+    elseif abs(omg(i)) > (W * 2 * pi)
+        omega_raisedcos(i) = 0;
+    else
+        omega_raisedcos(i) = Ts / 2 * (1 + cos(pi * Ts / alpha * (abs(omg(i) / (2 * pi)) - (1 -alpha) / (2 * Ts))));
+    end
+
+end
 
 %% 【冲激调制序列】
 a_t = zeros(1, length(t)); % a_t 冲激调制得到的序列
 
 for n = 1:length(a_n)
-    a_t(int32(n * Ts / precision)) = a_n(n) * 1000; % 这里乘系数1000表示delta函数
+    a_t(n * precision_N) = a_n(n) * 1000; % 这里乘系数1000表示delta函数 % TODO 这里冲激的表示 emmm 真的没问题嘛
 end
 
 % 时域
@@ -47,53 +59,54 @@ plot(t, a_t); xlabel("t"); legend("a(t)");
 figure(1); subplot(subplot_r, subplot_c, 2);
 plot(omg, abs(FT * a_t')); xlabel("\omega"); legend("F(a(t))")
 
-%% 【a(t)通过发射滤波器（这里使用低通滤波器，后面替换为根号升余弦）】
-w_c = W_high; % 低通滤波器截止角频率给出
-s_t = IFT * (FT * a_t' .* (omg > -w_c & omg < w_c));
-s_t = real(s_t');
+%% 【a(t)通过发射滤波器】
+s_t = IFT * (FT * a_t' .* sqrt(omega_raisedcos));
+s_t = real(s_t'); % 计算精度会出现很小的虚部 直接取实部就好了
 
 figure(1); subplot(subplot_r, subplot_c, 3);
-plot(t, s_t); xlabel("t"); legend("s(t)");
+plot(t, s_t); xlabel("t");
+hold on; stem((1:length(a_n)) * Ts, s_t((1:length(a_n)) * precision_N + 1)); hold off;
+legend("s(t)", "采样点");
 figure(1); subplot(subplot_r, subplot_c, 4);
 plot(omg, abs(FT * s_t')); xlabel("\omega"); legend("F(s(t))")
 
-%% 【升频】TODO
+%% 【升频】TODO 直接乘cos 注意写成复数的形式 这样之后复数也可以直接用
 
-%% 【信道传输】信道本身是低通或者带通（大作业是带通）而且要附加噪声 这里先写成低通
-
-w_c_channel = w_c;
+%% 【信道传输】信道本身是带通 而且要附加噪声
+% TODO  这里先写成低通 需要改成带通
+w_c_channel = omega_high;
 r_t = IFT * (FT * s_t' .* (omg > -w_c_channel & omg < w_c_channel)); % r_t 经过信道后的波形
 r_t = real(r_t');
-
-r_t = awgn(r_t, SNR, 'measured'); % 信号能量由MATLAB计算得到
+r_t = awgn(r_t, SNR, 'measured'); % awgn附加高斯噪声 信号能量由MATLAB计算得到
 
 figure(1); subplot(subplot_r, subplot_c, 5);
-plot(t, r_t); xlabel("t"); legend("r(t)");
+plot(t, r_t); xlabel("t");
+hold on; stem((1:length(a_n)) * Ts, r_t((1:length(a_n)) * precision_N + 1)); hold off;
+legend("r(t)", "(采样点)");
 figure(1); subplot(subplot_r, subplot_c, 6);
-plot(omg, abs(FT * r_t')); xlabel("\omega"); legend("F(r(t))") % `FT * r_t'` 和 `FT * a_t' .* (omg > -w_c & omg < w_c)` 有一些差异，可能是因为IFT*FT不是单位阵 而且限制时域和频域的范围相当于加窗……
+plot(omg, abs(FT * r_t')); xlabel("\omega"); legend("F(r(t))")
 
-%% 【降频】TODO
+%% 【降频】TODO 乘以cos再过理想低通 注意1/2系数？
 
 %% 【接收】
-y_t = IFT * (FT * r_t' .* (omg > -w_c & omg < w_c)); % y_t 经过接收机后的波形 % 使用和发射滤波器同样的低通截止角频率
+y_t = IFT * (FT * r_t' .* sqrt(omega_raisedcos)); % y_t 经过接收机后的波形 % 使用和发射滤波器同样的低通截止角频率
 y_t = real(y_t');
 
 figure(1); subplot(subplot_r, subplot_c, 7);
-plot(t, y_t); xlabel("t"); legend("y(t)");
+plot(t, y_t); xlabel("t");
+hold on; stem((1:length(a_n)) * Ts, y_t((1:length(a_n)) * precision_N + 1)); hold off;
+legend("y(t)", "采样点");
 figure(1); subplot(subplot_r, subplot_c, 8);
-plot(omg, abs(FT * y_t')); xlabel("\omega"); legend("F(y(t))") % `figure();plot(t,y_t-s_t);` 可以看到和原始信号有多大差异 将SNR设置到-20能看到明显差异 可能还与Ts有关，这里Ts实在是太大了(1s)
-% figure(); plot(t, y_t - s_t); title("y(t)-s(t)")
+plot(omg, abs(FT * y_t')); xlabel("\omega"); legend("F(y(t))")
 
 %% 【采样】
 y_n = zeros(1, length(a_n)); % y_n 采样得到的比特序列
 
 for n = 1:length(a_n)
-    y_n(n) = y_t(int16(n * Ts / precision));
+    y_n(n) = y_t(n * precision_N);
 end
 
 fprintf("y_n"); disp(y_n);
-figure(1); subplot(subplot_r, subplot_c, 9);
-stem(y_n); legend("y[n]")
 
 %% 【判决】
 yy_n = zeros(1, length(a_n)); % yy_n 判决后得到的离散序列
@@ -110,5 +123,3 @@ for n = 1:length(a_n)
 end
 
 fprintf("yy_n"); disp(yy_n);
-figure(1); subplot(subplot_r, subplot_c, 11);
-stem(yy_n); legend("yy[n]")
