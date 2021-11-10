@@ -1,8 +1,19 @@
+# data
+__pycache__/*
+data/*
+
+# MATLAB
 *.asv
 *.mlx
 *.mat
+
+# VS Code
 .vscode/*
+
+# Playground
+playground_yumeow/
 playground_yxj/
 playground.m
+
+# Others
 gggMATLAB/
-__pycache__
