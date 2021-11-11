@@ -6,7 +6,7 @@ clear;close all;clc;
 % TODO b_n -> a_n 的映射是可以调整的，也就是那些 MASK MPSK MQAM MFSK
 SNR = 20; % 给定信噪比
 % 【发送】
-a_n = [0, 1, 1, 0, 1, 0, 1, 1]; % a_n 要发送的比特序列
+a_n = randi([0, 1], 1, 8192); % a_n 要发送的比特序列
 
 %% constants
 f_low = 300; omega_low = f_low * 2 * pi;
@@ -15,6 +15,7 @@ f_0 = (f_high + f_low) / 2; omega_0 = f_0 * 2 * pi;
 W = (f_high - f_low) / 2; % W 升余弦滤波器中的W 最右边的那个点 约等于1500Hz
 alpha = 0.5;
 Ts = (alpha + 1) / 2 / W; % 采样间隔 (s)
+Rs = 1 / Ts;
 % `alpha = 2*W*Ts - 1 = 0.5`
 % 这里采样间隔相当于传输两个符号之间的间隔 1s可以传2000个符号
 % 题目要求为8000bit 要在5s内传完
@@ -28,17 +29,22 @@ omega_range = [-1.5 * omega_high, 1.5 * omega_high]; % 这里做频域分析，�
 omega_N = 8000;
 t_range = [t_start, t_end];
 t_N = (t_end - t_start) / precision;
-[t, omg, FT, IFT] = prefourier(t_range, t_N, omega_range, omega_N);
+T = t_range(2) - t_range(1);
+t = linspace(t_range(1), t_range(2) - T / t_N, t_N)';
+OMG = omega_range(2) - omega_range(1);
+omg = linspace(omega_range(1), omega_range(2) - OMG / omega_N, omega_N)';
 t = t'; % 大多使用行向量
 
 %% ——升余弦滤波器——
-omega_raisedcos = risecos(omg / (2 * pi), W, alpha);
+s_len = min(2 * length(a_n), 128);
+t_raisedcos = rcosdesign(alpha, s_len , precision_N, 'sqrt'); % 生成根号升余弦的时域波形，一共 s_len * precision_N + 1个采样点，最中间的采样点对应 t = 0 时刻
+t_raisedcos = t_raisedcos / max(t_raisedcos); % 默认生成的 t_raisedcos 能量为 1，我们希望它的中心振幅为 1。
 
 %% 【冲激调制序列】
 a_t = zeros(1, length(t)); % a_t 冲激调制得到的序列
 
 for n = 1:length(a_n)
-    a_t(n * precision_N) = a_n(n) / precision; % 用时间宽度为 precision 的求和代替积分时，delta 应当取高度为 1/precision 使得求和结果为 1
+    a_t(n * precision_N) = a_n(n); % 用时间宽度为 precision 的求和代替积分时，delta 应当取高度为 1/precision 使得求和结果为 1
 end
 
 % 时域
@@ -46,27 +52,25 @@ figure(1); subplot(subplot_r, subplot_c, 1);
 plot(t, a_t); xlabel("t"); legend("a(t)");
 % 频域
 figure(1); subplot(subplot_r, subplot_c, 2);
-plot(omg, abs(FT * a_t').^2); xlabel("\omega"); legend("F(a(t))")
+plot(abs(fft(a_t)).^2); xlabel("\omega"); legend("F(a(t))")
 
 %% 【a(t)通过发射滤波器】
-s_t = IFT * (FT * a_t' .* sqrt(omega_raisedcos));
-s_t = real(s_t'); % 计算精度会出现很小的虚部 直接取实部就好了
+s_t = upfirdn(a_t, t_raisedcos); % 用根号升余弦滤波，upfirdn 知道 t_raisedcos 的中间点对应 t=0，因此会在结果前后各引入多余的 (length(t_raisedcos) - 1) / 2 个点
+delay = (length(t_raisedcos) - 1) / 2;
+s_t = s_t(delay + 1:end - delay);
 
 figure(1); subplot(subplot_r, subplot_c, 3);
 plot(t, s_t); xlabel("t");
 hold on; stem((1:length(a_n)) * Ts, s_t((1:length(a_n)) * precision_N + 1)); hold off;
 legend("s(t)", "采样点");
 figure(1); subplot(subplot_r, subplot_c, 4);
-plot(omg, abs(FT * s_t').^2); xlabel("\omega"); legend("F(s(t))")
+plot(abs(fft(s_t)).^2); xlabel("\omega"); legend("F(s(t))")
 
 %% 【升频】TODO 直接乘cos 注意写成复数的形式 这样之后复数也可以直接用
 u_t = s_t .* cos(omega_0 * t);
 
 %% 【信道传输】信道本身是带通 而且要附加噪声
-% TODO  这里先写成低通 需要改成带通
-w_c_channel = omega_high;
-r_t = IFT * (FT * u_t.' .* (abs(omg) > omega_low & abs(omg) < omega_high)); % r_t 经过信道后的波形
-r_t = real(r_t');
+r_t = u_t;
 r_t = awgn(r_t, SNR, 'measured'); % awgn附加高斯噪声 信号能量由MATLAB计算得到
 
 figure(1); subplot(subplot_r, subplot_c, 5);
@@ -74,21 +78,22 @@ plot(t, r_t); xlabel("t");
 hold on; stem((1:length(a_n)) * Ts, r_t((1:length(a_n)) * precision_N + 1)); hold off;
 legend("r(t)", "(采样点)");
 figure(1); subplot(subplot_r, subplot_c, 6);
-plot(omg, abs(FT * r_t').^2); xlabel("\omega"); legend("F(r(t))")
+plot(abs(fft(r_t)).^2); xlabel("\omega"); legend("F(r(t))")
 
 %% 【降频】TODO 乘以cos再过理想低通 注意1/2系数？
 w_t = 2 * r_t .* cos(omega_0 * t); % 接受滤波器的根号升余弦就是低通了，这里不用过一次低通
 
 %% 【接收】
-y_t = IFT * (FT * w_t.' .* sqrt(omega_raisedcos)); % y_t 经过接收机后的波形 % 使用和发射滤波器同样的低通截止角频率
-y_t = real(y_t');
+y_t = upfirdn(w_t, t_raisedcos); % 用根号升余弦滤波，upfirdn 知道 t_raisedcos 的中间点对应 t=0，因此会在结果前后各引入多余的 (length(t_raisedcos) - 1) / 2 个点
+delay = (length(t_raisedcos) - 1) / 2;
+y_t = y_t(delay + 1:end - delay);
 
 figure(1); subplot(subplot_r, subplot_c, 7);
 plot(t, y_t); xlabel("t");
 hold on; stem((1:length(a_n)) * Ts, y_t((1:length(a_n)) * precision_N + 1)); hold off;
 legend("y(t)", "采样点");
 figure(1); subplot(subplot_r, subplot_c, 8);
-plot(omg, abs(FT * y_t').^2); xlabel("\omega"); legend("F(y(t))")
+plot(abs(fft(y_t)).^2); xlabel("\omega"); legend("F(y(t))")
 
 %% 【采样】
 y_n = zeros(1, length(a_n)); % y_n 采样得到的比特序列
@@ -111,3 +116,4 @@ for n = 1:length(a_n)
 end
 
 fprintf("yy_n"); disp(yy_n);
+fprintf("BER: "); disp(mean(yy_n ~= a_n));
