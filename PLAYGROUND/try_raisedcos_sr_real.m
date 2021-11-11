@@ -31,25 +31,13 @@ t_N = (t_end - t_start) / precision;
 t = t'; % 大多使用行向量
 
 %% ——升余弦滤波器——
-omega_raisedcos = zeros(length(omg), 1);
-
-for i = 1:length(omg)
-
-    if abs(omg(i)) < ((1 - alpha) / (1 + alpha) * W * 2 * pi)
-        omega_raisedcos(i) = Ts;
-    elseif abs(omg(i)) > (W * 2 * pi)
-        omega_raisedcos(i) = 0;
-    else
-        omega_raisedcos(i) = Ts / 2 * (1 + cos(pi * Ts / alpha * (abs(omg(i) / (2 * pi)) - (1 -alpha) / (2 * Ts))));
-    end
-
-end
+omega_raisedcos = risecos(omg / (2 * pi), W, alpha);
 
 %% 【冲激调制序列】
 a_t = zeros(1, length(t)); % a_t 冲激调制得到的序列
 
 for n = 1:length(a_n)
-    a_t(n * precision_N) = a_n(n) * 1000; % 这里乘系数1000表示delta函数 % TODO 这里冲激的表示 emmm 真的没问题嘛
+    a_t(n * precision_N) = a_n(n) * t_N;
 end
 
 % 时域
