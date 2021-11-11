@@ -11,6 +11,7 @@ a_n = [0, 1, 1, 0, 1, 0, 1, 1]; % a_n 要发送的比特序列
 %% constants
 f_low = 300; omega_low = f_low * 2 * pi;
 f_high = 3400; omega_high = f_high * 2 * pi;
+f_0 = (f_high + f_low) / 2; omega_0 = f_0 * 2 * pi;
 W = (f_high - f_low) / 2; % W 升余弦滤波器中的W 最右边的那个点 约等于1500Hz
 alpha = 0.5;
 Ts = (alpha + 1) / 2 / W; % 采样间隔 (s)
@@ -59,11 +60,12 @@ figure(1); subplot(subplot_r, subplot_c, 4);
 plot(omg, abs(FT * s_t').^2); xlabel("\omega"); legend("F(s(t))")
 
 %% 【升频】TODO 直接乘cos 注意写成复数的形式 这样之后复数也可以直接用
+u_t = s_t .* cos(omega_0 * t);
 
 %% 【信道传输】信道本身是带通 而且要附加噪声
 % TODO  这里先写成低通 需要改成带通
 w_c_channel = omega_high;
-r_t = IFT * (FT * s_t' .* (omg > -w_c_channel & omg < w_c_channel)); % r_t 经过信道后的波形
+r_t = IFT * (FT * u_t.' .* (abs(omg) > omega_low & abs(omg) < omega_high)); % r_t 经过信道后的波形
 r_t = real(r_t');
 r_t = awgn(r_t, SNR, 'measured'); % awgn附加高斯噪声 信号能量由MATLAB计算得到
 
@@ -75,9 +77,10 @@ figure(1); subplot(subplot_r, subplot_c, 6);
 plot(omg, abs(FT * r_t').^2); xlabel("\omega"); legend("F(r(t))")
 
 %% 【降频】TODO 乘以cos再过理想低通 注意1/2系数？
+w_t = 2 * r_t .* cos(omega_0 * t); % 接受滤波器的根号升余弦就是低通了，这里不用过一次低通
 
 %% 【接收】
-y_t = IFT * (FT * r_t' .* sqrt(omega_raisedcos)); % y_t 经过接收机后的波形 % 使用和发射滤波器同样的低通截止角频率
+y_t = IFT * (FT * w_t.' .* sqrt(omega_raisedcos)); % y_t 经过接收机后的波形 % 使用和发射滤波器同样的低通截止角频率
 y_t = real(y_t');
 
 figure(1); subplot(subplot_r, subplot_c, 7);
