@@ -1,11 +1,8 @@
-from random import randrange
+
 import random
-from EIGamal_get_param import EIGamal_get_param
 from GetPrime import FastPow
 
-# EIGamal的加密程序，需要先生成参数作为输入
-
-
+# EIGamal的加密程序，需要先在EIGamal_test.py中生成参数作为输入
 def EIGamal_encode(input, y, p, g):
     # 生成加密的参数k
     k = random.randrange(2, p-2)

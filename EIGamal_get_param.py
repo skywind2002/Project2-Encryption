@@ -4,6 +4,7 @@ import random
 import sys
 
 # 本程序用于生成EIGamal加密算法所需要的公钥与私钥
+# 这只是个函数，测试的话运行EIGamal_test.py
 
 # 公钥部分有:
 # p: 大质数, 是循环域的大小
@@ -12,8 +13,6 @@ import sys
 
 # 私钥部分有:
 # d：2~p-1的一个随机整数
-
-
 def EIGamal_get_param(p=9):  # 参数为p的初始值，是啥都行，别是素数
     # 找到生成域的素数p
     while PrimeTest(p) == 0:

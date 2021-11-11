@@ -1,8 +1,7 @@
 from GetPrime import FastPow, Reuclid
 
-# EIGamal解密算法,知道的信息有传输过来的信号c1,c2以及私钥d,公钥p,g,y
-
-
+# EIGamal解密算法,知道的信息有传输过来的信号c1,c2以及私钥d,公钥p,g
+# 需要先在EIGamal_test中运行参数生成和加密作为先导
 def EIGamal_decode(input1, input2, d, p):
     V = FastPow(input1, d, p)  # 此时V=g^(dk)，利用私钥d将加密端的k破译
     InvV, _, _ = Reuclid(V, p)
