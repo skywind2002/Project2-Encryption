@@ -37,7 +37,7 @@ omega_raisedcos = risecos(omg / (2 * pi), W, alpha);
 a_t = zeros(1, length(t)); % a_t 冲激调制得到的序列
 
 for n = 1:length(a_n)
-    a_t(n * precision_N) = a_n(n) * t_N;
+    a_t(n * precision_N) = a_n(n) / precision; % 用时间宽度为 precision 的求和代替积分时，delta 应当取高度为 1/precision 使得求和结果为 1
 end
 
 % 时域
@@ -100,14 +100,11 @@ fprintf("y_n"); disp(y_n);
 yy_n = zeros(1, length(a_n)); % yy_n 判决后得到的离散序列
 
 for n = 1:length(a_n)
-    % 只有两个值可以用门限判断 % FIXME 最终得到的波形和最开始的相差幅度比较严重(和s_t是很相近的)，不然可以一开始就确定判决门限
-    % TODO 修改判决方法
-    if abs(y_n(n)) < 2
+    if abs(y_n(n)) < 0.5
         yy_n(n) = 0;
     else
         yy_n(n) = 1;
     end
-
 end
 
 fprintf("yy_n"); disp(yy_n);
