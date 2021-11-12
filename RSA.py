@@ -1,13 +1,13 @@
 """
 功能：生成 RSA 秘钥、利用秘钥对明文进行加密和解密。
-使用方法：python RSA.py G/E/D [PU/PR]
-    G: 生成秘钥。E：加密。D：解密。PU：使用公钥。PR：使用私钥
+使用方法：python RSA.py G/E/D [<len>/PU/PR]
+    G: 生成秘钥。E：加密。D：解密。<len>：消息的二进制长度。PU：使用公钥。PR：使用私钥
 例：
-    - python RSA.py G（生成秘钥，保存在 ./data/RSA_pub.txt ./data/RSA_pri.txt 中）
+    - python RSA.py G 1024（生成 1024 位秘钥，保存在 ./data/RSA_pub.txt ./data/RSA_pri.txt 中）
     - python RSA.py E PU（利用公钥对 ./data/message.txt 中的二进制信息加密，以二进制输出到 ./data/secret.txt 中）
     - python RSA.py D PR（利用私钥对 ./data/secret.txt 中的二进制信息解密，以二进制输出到 ./data/message.txt 中）
 在 MATLAB 中使用方式：
-    system("python RSA.py G"); % 生成秘钥，这一步可以不做
+    system("python RSA.py G 1024"); % 生成秘钥，这一步可以不做
     % 加密
     f = fopen('./data/message.txt','w');
     fwrite(f, char(message + '0')); % 将行向量比特流 message 写入明文文件
@@ -59,8 +59,9 @@ def Getd(phi, e):
 
 if __name__ == "__main__":
     if(sys.argv[1] == "G"):  # 生成一对秘钥
-        p = GetPrime()  # 生成 RSA 所需要的两个大素数 p 和 q
-        q = GetPrime()
+        bitlen = int(sys.argv[2])
+        p = GetPrime(bitlen)  # 生成 RSA 所需要的两个大素数 p 和 q
+        q = GetPrime(bitlen)
         phi = (p - 1) * (q - 1)
         n = p * q
         e = Gete(phi)  # 生成公钥
@@ -87,7 +88,9 @@ if __name__ == "__main__":
         # 输出密文
         with open("./data/secret.txt", "w") as f:
             s = FastPow(m, key, n)
-            f.writelines(bin(s)[2:])
+            s_bin = bin(s)[2:]
+            s_bin = "0" * (len(bin(n)) - len(s_bin)) + s_bin # 前面补零
+            f.writelines(s_bin)
 
     elif(sys.argv[1] == "D"):  # 解码
         # 读入密文
@@ -102,4 +105,6 @@ if __name__ == "__main__":
         # 输出明文
         with open("./data/message.txt", "w") as f:
             m = FastPow(s, key, n)
-            f.writelines(bin(m)[2:])
+            m_bin = bin(m)[2:]
+            m_bin = "0" * (len(bin(n)) - len(m_bin)) + m_bin # 前面补零
+            f.writelines(m_bin)
