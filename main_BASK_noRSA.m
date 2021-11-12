@@ -24,7 +24,7 @@ subplot_r = 4; subplot_c = 2; % subplot作图
 
 %% prefourier
 t_start = 0; t_end = Ts * length(a_n) * 1.2;
-precision_N = 16; precision = Ts / precision_N; % 时频信号MATLAB计算精度
+precision_N = 3; precision = Ts / precision_N; % 时频信号MATLAB计算精度
 omega_range = [-1.5 * omega_high, 1.5 * omega_high]; % 这里做频域分析，至少范围要大于 ±omega_high
 omega_N = 8000;
 t_range = [t_start, t_end];
@@ -84,7 +84,7 @@ plot(abs(fft(r_t)).^2); xlabel("\omega"); legend("F(r(t))")
 w_t = 2 * r_t .* cos(omega_0 * t); % 接受滤波器的根号升余弦就是低通了，这里不用过一次低通
 
 %% 【接收】
-y_t = upfirdn(w_t, t_raisedcos); % 用根号升余弦滤波，upfirdn 知道 t_raisedcos 的中间点对应 t=0，因此会在结果前后各引入多余的 (length(t_raisedcos) - 1) / 2 个点
+y_t = upfirdn(w_t, t_raisedcos) / precision_N; % 用根号升余弦滤波，upfirdn 知道 t_raisedcos 的中间点对应 t=0，因此会在结果前后各引入多余的 (length(t_raisedcos) - 1) / 2 个点
 delay = (length(t_raisedcos) - 1) / 2;
 y_t = y_t(delay + 1:end - delay);
 
