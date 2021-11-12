@@ -5,8 +5,23 @@ clear;close all;clc;
 %% parameters
 % TODO b_n -> a_n 的映射是可以调整的，也就是那些 MASK MPSK MQAM MFSK
 SNR = 20; % 给定信噪比
+% 【生成比特流】
+message = randi([0, 1], 1, 8192);
+% 【加密】
+system("python RSA.py G 1024");
+sercret = zeros(1, 1024 * 8);
+for i = 0:7
+    f_mes = fopen('./data/message.txt','w');
+    f_sec = fopen('./data/secret.txt','r');
+    fprintf("加密中……正在加密第 %d/%d 块\n", i+1, 8)
+    fwrite(f_mes, char(message(i*1024+1:i*1024+1024) + '0')); % 将行向量比特流 message 写入明文文件
+    system("python RSA.py E PU");
+    secret(i * 1024 + 1 : i * 1024 + 1024) = fread(f_sec) - '0'; % 从密文文件读回加密比特流
+    fclose(f_mes); fclose(f_sec);
+end
+
 % 【发送】
-a_n = randi([0, 1], 1, 8192); % a_n 要发送的比特序列
+a_n = secret; % a_n 要发送的比特序列
 
 %% constants
 f_low = 300; omega_low = f_low * 2 * pi;
@@ -106,7 +121,7 @@ for n = 1:length(a_n)
     y_n(n) = y_t(n * precision_N);
 end
 
-fprintf("y_n"); disp(y_n);
+% fprintf("y_n"); disp(y_n);
 
 %% 【判决】
 yy_n = zeros(1, length(a_n)); % yy_n 判决后得到的离散序列
@@ -119,5 +134,20 @@ for n = 1:length(a_n)
     end
 end
 
-fprintf("yy_n"); disp(yy_n);
-fprintf("BER: "); disp(mean(yy_n ~= a_n));
+%% 【解密】
+secret_2 = yy_n;
+message_2 = zeros(size(secret_2));
+for i = 0:7
+    fprintf("解密中……正在加密第 %d/%d 块\n", i+1, 8)
+    f_mes = fopen('./data/message.txt','r');
+    f_sec = fopen('./data/secret.txt','w');
+    fwrite(f_sec, char(secret_2(i*1024+1:i*1024+1024) + '0'));
+    system("python RSA.py D PR");
+    message_2(i * 1024 + 1 : i * 1024 + 1024) = fread(f_mes) - '0';
+    fclose(f_mes); fclose(f_sec);
+end
+
+
+% fprintf("yy_n"); disp(yy_n);
+fprintf("message BER: "); disp(mean(message ~= message_2));
+fprintf("secret BER: "); disp(mean(secret ~= secret_2));
