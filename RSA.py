@@ -60,8 +60,10 @@ def Getd(phi, e):
 if __name__ == "__main__":
     if(sys.argv[1] == "G"):  # 生成一对秘钥
         bitlen = int(sys.argv[2])
-        p = GetPrime(bitlen)  # 生成 RSA 所需要的两个大素数 p 和 q
-        q = GetPrime(bitlen)
+        p = GetPrime(bitlen / 2)  # 生成 RSA 所需要的两个大素数 p 和 q
+        q = GetPrime(bitlen - bitlen / 2)
+        while(len(bin(p * q)[2:]) != bitlen):
+            q = q = GetPrime(bitlen - bitlen / 2)
         phi = (p - 1) * (q - 1)
         n = p * q
         e = Gete(phi)  # 生成公钥
@@ -89,7 +91,7 @@ if __name__ == "__main__":
         with open("./data/secret.txt", "w") as f:
             s = FastPow(m, key, n)
             s_bin = bin(s)[2:]
-            s_bin = "0" * (len(bin(n)) - len(s_bin)) + s_bin # 前面补零
+            s_bin = "0" * (len(bin(n)[2:]) - len(s_bin)) + s_bin # 前面补零
             f.writelines(s_bin)
 
     elif(sys.argv[1] == "D"):  # 解码
@@ -106,5 +108,5 @@ if __name__ == "__main__":
         with open("./data/message.txt", "w") as f:
             m = FastPow(s, key, n)
             m_bin = bin(m)[2:]
-            m_bin = "0" * (len(bin(n)) - len(m_bin)) + m_bin # 前面补零
+            m_bin = "0" * (len(bin(n)[2:]) - len(m_bin)) + m_bin # 前面补零
             f.writelines(m_bin)
