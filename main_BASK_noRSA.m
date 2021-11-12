@@ -49,10 +49,11 @@ end
 
 % 时域
 figure(1); subplot(subplot_r, subplot_c, 1);
-plot(t, a_t); xlabel("t"); legend("a(t)");
+plot(t(t < 20 * Ts), a_t(t < 20 * Ts)); xlabel("t"); legend("a(t)");
 % 频域
 figure(1); subplot(subplot_r, subplot_c, 2);
-plot(abs(fft(a_t)).^2); xlabel("\omega"); legend("F(a(t))")
+[P, f] = power_spectrum(a_t, precision, 1024);
+plot(f, P); xlabel("f/Hz"); legend("F(a(t))")
 
 %% 【a(t)通过发射滤波器】
 s_t = upfirdn(a_t, t_raisedcos); % 用根号升余弦滤波，upfirdn 知道 t_raisedcos 的中间点对应 t=0，因此会在结果前后各引入多余的 (length(t_raisedcos) - 1) / 2 个点
@@ -60,11 +61,12 @@ delay = (length(t_raisedcos) - 1) / 2;
 s_t = s_t(delay + 1:end - delay);
 
 figure(1); subplot(subplot_r, subplot_c, 3);
-plot(t, s_t); xlabel("t");
-hold on; stem((1:length(a_n)) * Ts, s_t((1:length(a_n)) * precision_N + 1)); hold off;
+plot(t(t < 20 * Ts), s_t(t < 20 * Ts)); xlabel("t");
+%hold on; stem((1:length(a_n)) * Ts, s_t((1:length(a_n)) * precision_N + 1)); hold off;
 legend("s(t)", "采样点");
 figure(1); subplot(subplot_r, subplot_c, 4);
-plot(abs(fft(s_t)).^2); xlabel("\omega"); legend("F(s(t))")
+[P, f] = power_spectrum(s_t, precision, 1024);
+plot(f, P); xlabel("f/Hz"); legend("F(s(t))")
 
 %% 【升频】TODO 直接乘cos 注意写成复数的形式 这样之后复数也可以直接用
 u_t = s_t .* cos(omega_0 * t);
@@ -74,11 +76,12 @@ r_t = u_t;
 r_t = awgn(r_t, SNR, 'measured'); % awgn附加高斯噪声 信号能量由MATLAB计算得到
 
 figure(1); subplot(subplot_r, subplot_c, 5);
-plot(t, r_t); xlabel("t");
-hold on; stem((1:length(a_n)) * Ts, r_t((1:length(a_n)) * precision_N + 1)); hold off;
+plot(t(t < 20 * Ts), r_t(t < 20 * Ts)); xlabel("t");
+%hold on; stem((1:length(a_n)) * Ts, r_t((1:length(a_n)) * precision_N + 1)); hold off;
 legend("r(t)", "(采样点)");
 figure(1); subplot(subplot_r, subplot_c, 6);
-plot(abs(fft(r_t)).^2); xlabel("\omega"); legend("F(r(t))")
+[P, f] = power_spectrum(r_t, precision, 1024);
+plot(f, P); xlabel("f/Hz"); legend("F(r(t))")
 
 %% 【降频】TODO 乘以cos再过理想低通 注意1/2系数？
 w_t = 2 * r_t .* cos(omega_0 * t); % 接受滤波器的根号升余弦就是低通了，这里不用过一次低通
@@ -89,11 +92,12 @@ delay = (length(t_raisedcos) - 1) / 2;
 y_t = y_t(delay + 1:end - delay);
 
 figure(1); subplot(subplot_r, subplot_c, 7);
-plot(t, y_t); xlabel("t");
-hold on; stem((1:length(a_n)) * Ts, y_t((1:length(a_n)) * precision_N + 1)); hold off;
+plot(t(t < 20 * Ts), y_t(t < 20 * Ts)); xlabel("t");
+%hold on; stem((1:length(a_n)) * Ts, y_t((1:length(a_n)) * precision_N + 1)); hold off;
 legend("y(t)", "采样点");
 figure(1); subplot(subplot_r, subplot_c, 8);
-plot(abs(fft(y_t)).^2); xlabel("\omega"); legend("F(y(t))")
+[P, f] = power_spectrum(y_t, precision, 1024);
+plot(f, P); xlabel("f/Hz"); legend("F(y(t))")
 
 %% 【采样】
 y_n = zeros(1, length(a_n)); % y_n 采样得到的比特序列
