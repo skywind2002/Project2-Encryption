@@ -3,7 +3,7 @@
 clear;close all;clc;
 
 %% parameters
-SNR = 40; % 给定信噪比
+SNR = 20; % 给定信噪比
 % TODO b_n -> a_n 的映射是可以调整的，也就是那些 MASK MPSK MQAM MFSK
 SK_way = 'QASK';
 
@@ -44,7 +44,7 @@ end
 
 %% prefourier
 t_start = 0; t_end = Ts * length(a_n) * 1.2;
-precision_N = 3; precision = Ts / precision_N; % 时频信号MATLAB计算精度
+precision_N = 3; precision = Ts / precision_N; % 时频信号MATLAB计算精度 % precision_N取3够用了
 omega_range = [-1.5 * omega_high, 1.5 * omega_high]; % 这里做频域分析，至少范围要大于 ±omega_high
 omega_N = 8000;
 t_range = [t_start, t_end];
@@ -58,7 +58,8 @@ t = t'; % 大多使用行向量
 %% ——升余弦滤波器——
 s_len = min(2 * length(a_n), 128);
 t_raisedcos = rcosdesign(alpha, s_len, precision_N, 'sqrt'); % 生成根号升余弦的时域波形，一共 s_len * precision_N + 1个采样点，最中间的采样点对应 t = 0 时刻
-t_raisedcos = t_raisedcos / max(t_raisedcos); % 默认生成的 t_raisedcos 能量为 1，我们希望它的中心振幅为 1。
+t_raisedcos = 1.14 * t_raisedcos / max(t_raisedcos); % 默认生成的 t_raisedcos 能量为 1，我们希望它的中心振幅为 1。
+% FIXME 这里1.14的原理？
 
 %% 【冲激调制序列】
 a_t = zeros(1, length(t)); % a_t 冲激调制得到的序列
@@ -134,11 +135,11 @@ switch SK_way
     case 'BASK'
         message_rec = SKi_BASK(y_n);
     case 'QASK'
-        fprintf("y_n(1:16)"); disp(y_n(1:16));
-        message_rec = SKi_QASK(y_n * 4/3); % FIXME 这里完全不懂要怎么确定最开始delta函数的取值
+        % fprintf("y_n(1:16)"); disp(y_n(1:16));
+        message_rec = SKi_QASK(y_n);
     otherwise
         assert(0, "没有所选择的符号映射方式");
 end
 
-fprintf("message_rec(1:16)"); disp(message_rec(1:16));
+% fprintf("message_rec(1:16)"); disp(message_rec(1:16));
 figure(2); stem(message_rec ~= message); title("传输总过程中的误码图案");
