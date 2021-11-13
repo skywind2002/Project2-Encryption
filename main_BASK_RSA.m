@@ -7,17 +7,23 @@ clear;close all;clc;
 % TODO b_n -> a_n 的映射是可以调整的，也就是那些 MASK MPSK MQAM MFSK
 SNR = 20; % 给定信噪比
 % 【生成比特流】
-message = randi([0, 1], 1, 8192);
-% 【加密】
-system("python RSA.py G 1024");
-sercret = zeros(1, 1024 * 8);
+message = randi([0, 1], 1, (1024 + 1) * 8);
+
 for i = 0:7
-    f_mes = fopen('./data/message.txt','w');
-    f_sec = fopen('./data/secret.txt','r');
-    fprintf("加密中……正在加密第 %d/%d 块\n", i+1, 8)
-    fwrite(f_mes, char(message(i*1024+1:i*1024+1024) + '0')); % 将行向量比特流 message 写入明文文件
+    message(i * (1024 + 1) + 1) = 0; % 在每一块的开头添加1bit 0来保证RSA算法运行的正确性(message<n=pq)
+end
+
+% 【加密】
+system("python RSA.py G 1025");
+sercret = zeros(1, (1024 + 1) * 8);
+
+for i = 0:7
+    f_mes = fopen('./data/message.txt', 'w');
+    f_sec = fopen('./data/secret.txt', 'r');
+    fprintf("加密中……正在加密第 %d/%d 块\n", i + 1, 8)
+    fwrite(f_mes, char(message(i * (1024 + 1) + 1:i * (1024 + 1) + (1024 + 1)) + '0')); % 将行向量比特流 message 写入明文文件
     system("python RSA.py E PU");
-    secret(i * 1024 + 1 : i * 1024 + 1024) = fread(f_sec) - '0'; % 从密文文件读回加密比特流
+    secret(i * (1024 + 1) + 1:i * (1024 + 1) + (1024 + 1)) = fread(f_sec) - '0'; % 从密文文件读回加密比特流
     fclose(f_mes); fclose(f_sec);
 end
 
@@ -53,7 +59,7 @@ t = t'; % 大多使用行向量
 
 %% ——升余弦滤波器——
 s_len = min(2 * length(a_n), 128);
-t_raisedcos = rcosdesign(alpha, s_len , precision_N, 'sqrt'); % 生成根号升余弦的时域波形，一共 s_len * precision_N + 1个采样点，最中间的采样点对应 t = 0 时刻
+t_raisedcos = rcosdesign(alpha, s_len, precision_N, 'sqrt'); % 生成根号升余弦的时域波形，一共 s_len * precision_N + 1个采样点，最中间的采样点对应 t = 0 时刻
 t_raisedcos = t_raisedcos / max(t_raisedcos); % 默认生成的 t_raisedcos 能量为 1，我们希望它的中心振幅为 1。
 
 %% 【冲激调制序列】
@@ -69,7 +75,7 @@ plot(t(t < 20 * Ts), a_t(t < 20 * Ts)); xlabel("t"); legend("a(t)");
 hold on; stem((1:20) * Ts - precision, a_t((1:20) * precision_N)); hold off;
 % 频域
 figure(1); subplot(subplot_r, subplot_c, 2);
-[P, f] = power_spectrum(a_t, precision, 1024);
+[P, f] = power_spectrum(a_t, precision, (1024 + 1));
 plot(f, 10 * log10(P)); xlabel("f/Hz"); legend("F(a(t))")
 
 %% 【a(t)通过发射滤波器】
@@ -82,7 +88,7 @@ plot(t(t < 20 * Ts), s_t(t < 20 * Ts)); xlabel("t");
 hold on; stem((1:20) * Ts - precision, s_t((1:20) * precision_N)); hold off;
 legend("s(t)", "采样点");
 figure(1); subplot(subplot_r, subplot_c, 4);
-[P, f] = power_spectrum(s_t, precision, 1024);
+[P, f] = power_spectrum(s_t, precision, (1024 + 1));
 plot(f, 10 * log10(P)); xlabel("f/Hz"); legend("F(s(t))")
 
 %% 【升频】TODO 直接乘cos 注意写成复数的形式 这样之后复数也可以直接用
@@ -97,7 +103,7 @@ plot(t(t < 20 * Ts), r_t(t < 20 * Ts)); xlabel("t");
 hold on; stem((1:20) * Ts - precision, r_t((1:20) * precision_N)); hold off;
 legend("r(t)", "(采样点)");
 figure(1); subplot(subplot_r, subplot_c, 6);
-[P, f] = power_spectrum(r_t, precision, 1024);
+[P, f] = power_spectrum(r_t, precision, (1024 + 1));
 plot(f, 10 * log10(P)); xlabel("f/Hz"); legend("F(r(t))")
 
 %% 【降频】TODO 乘以cos再过理想低通 注意1/2系数？
@@ -113,7 +119,7 @@ plot(t(t < 20 * Ts), y_t(t < 20 * Ts)); xlabel("t");
 hold on; stem((1:20) * Ts - precision, y_t((1:20) * precision_N)); hold off;
 legend("y(t)", "采样点");
 figure(1); subplot(subplot_r, subplot_c, 8);
-[P, f] = power_spectrum(y_t, precision, 1024);
+[P, f] = power_spectrum(y_t, precision, (1024 + 1));
 plot(f, 10 * log10(P)); xlabel("f/Hz"); legend("F(y(t))")
 
 %% 【采样】
@@ -129,23 +135,26 @@ end
 yy_n = zeros(1, length(a_n)); % yy_n 判决后得到的离散序列
 
 for n = 1:length(a_n)
+
     if abs(y_n(n)) < 0.5
         yy_n(n) = 0;
     else
         yy_n(n) = 1;
     end
+
 end
 
 %% 【解密】
 secret_2 = yy_n;
 message_2 = zeros(size(secret_2));
+
 for i = 0:7
-    fprintf("解密中……正在加密第 %d/%d 块\n", i+1, 8)
-    f_mes = fopen('./data/message.txt','r');
-    f_sec = fopen('./data/secret.txt','w');
-    fwrite(f_sec, char(secret_2(i*1024+1:i*1024+1024) + '0'));
+    fprintf("解密中……正在加密第 %d/%d 块\n", i + 1, 8)
+    f_mes = fopen('./data/message.txt', 'r');
+    f_sec = fopen('./data/secret.txt', 'w');
+    fwrite(f_sec, char(secret_2(i * (1024 + 1) + 1:i * (1024 + 1) + (1024 + 1)) + '0'));
     system("python RSA.py D PR");
-    message_2(i * 1024 + 1 : i * 1024 + 1024) = fread(f_mes) - '0';
+    message_2(i * (1024 + 1) + 1:i * (1024 + 1) + (1024 + 1)) = fread(f_mes) - '0';
     fclose(f_mes); fclose(f_sec);
 end
 

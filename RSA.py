@@ -28,9 +28,10 @@
 
 import random
 import sys
-from GetPrime import GetPrime, FastPow,Reuclid
+from GetPrime import GetPrime, FastPow, Reuclid
 
 # 辗转相除法求gcd
+
 
 def gcd(m, n):
     if m < n:
@@ -42,14 +43,17 @@ def gcd(m, n):
 # 生成和 phi 互素的公钥 e，e << phi
 
 
-def Gete(phi):
+def Gete(phi, p, q):
+    e = max(p, q)
     while True:
-        e = random.randrange(2, 500000000000)
+        e = e+2  # e取为大于p和q的数即可，没必要搞得那么大
         if gcd(phi, e) == 1:
             break
     return e
 
 # 由密钥 e 和欧拉函数 phi 求私钥 d
+
+
 def Getd(phi, e):
     d, _, _ = Reuclid(e, phi)  # 反辗转求 d
     if d < 0:
@@ -66,7 +70,7 @@ if __name__ == "__main__":
             q = q = GetPrime(bitlen - bitlen / 2)
         phi = (p - 1) * (q - 1)
         n = p * q
-        e = Gete(phi)  # 生成公钥
+        e = Gete(phi, p, q)  # 生成公钥
         d = Getd(phi, e)  # 生成私钥
         with open("./data/RSA_pub.txt", "w") as f:
             f.write(str(e))
@@ -91,7 +95,7 @@ if __name__ == "__main__":
         with open("./data/secret.txt", "w") as f:
             s = FastPow(m, key, n)
             s_bin = bin(s)[2:]
-            s_bin = "0" * (len(bin(n)[2:]) - len(s_bin)) + s_bin # 前面补零
+            s_bin = "0" * (len(bin(n)[2:]) - len(s_bin)) + s_bin  # 前面补零
             f.writelines(s_bin)
 
     elif(sys.argv[1] == "D"):  # 解码
@@ -108,5 +112,5 @@ if __name__ == "__main__":
         with open("./data/message.txt", "w") as f:
             m = FastPow(s, key, n)
             m_bin = bin(m)[2:]
-            m_bin = "0" * (len(bin(n)[2:]) - len(m_bin)) + m_bin # 前面补零
+            m_bin = "0" * (len(bin(n)[2:]) - len(m_bin)) + m_bin  # 前面补零
             f.writelines(m_bin)
