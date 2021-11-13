@@ -3,9 +3,9 @@
 clear;close all;clc;
 
 %% parameters
-SNR = 0; % 给定信噪比
+SNR = 40; % 给定信噪比
 % TODO b_n -> a_n 的映射是可以调整的，也就是那些 MASK MPSK MQAM MFSK
-SK_way = 'BASK';
+SK_way = 'QASK';
 
 %% constants
 f_low = 300; omega_low = f_low * 2 * pi;
@@ -22,7 +22,7 @@ Rs = 1 / Ts;
 subplot_r = 4; subplot_c = 2; % subplot作图
 
 %% 【生成比特流】
-message = randi([0, 1], 1, 60);
+message = randi([0, 1], 1, 60); % message 要发送的比特序列
 
 if rem(length(message), 16) ~= 0
     % 不是16的整数倍 补零
@@ -32,9 +32,12 @@ end
 %% 【发送】
 
 % 符号调制
+% a_n 要发送的符号序列
 switch SK_way
     case 'BASK'
-        a_n = SK_BASK(message); % a_n 要发送的比特序列
+        a_n = SK_BASK(message);
+    case 'QASK'
+        a_n = SK_QASK(message);
     otherwise
         assert(0, "没有所选择的符号映射方式");
 end
@@ -86,7 +89,7 @@ figure(1); subplot(subplot_r, subplot_c, 4);
 [P, f] = power_spectrum(s_t, precision, 1024);
 plot(f, 10 * log10(P)); xlabel("f/Hz"); legend("F(s(t))")
 
-%% 【升频】TODO 直接乘cos 注意写成复数的形式 这样之后复数也可以直接用
+%% 【升频】TODO 写成复数的形式 这样之后复数也可以直接用
 u_t = s_t .* cos(omega_0 * t);
 
 %% 【信道传输】信道本身是带通 而且要附加噪声
@@ -118,21 +121,24 @@ figure(1); subplot(subplot_r, subplot_c, 8);
 plot(f, 10 * log10(P)); xlabel("f/Hz"); legend("F(y(t))")
 
 %% 【采样】
-y_n = zeros(1, length(a_n)); % y_n 采样得到的比特序列
+y_n = zeros(1, length(a_n)); % y_n 采样得到的符号序列
 
 for n = 1:length(a_n)
     y_n(n) = y_t(n * precision_N);
 end
 
 %% 【判决】
-message_rec = zeros(1, length(a_n)); % message_rec 判决后得到的离散序列
+message_rec = zeros(1, length(a_n)); % message_rec 判决后得到的比特序列
 
 switch SK_way
     case 'BASK'
-        message_rec = SKi_BASK(y_n); % a_n 要发送的比特序列
+        message_rec = SKi_BASK(y_n);
+    case 'QASK'
+        fprintf("y_n(1:16)"); disp(y_n(1:16));
+        message_rec = SKi_QASK(y_n * 4/3); % FIXME 这里完全不懂要怎么确定最开始delta函数的取值
     otherwise
         assert(0, "没有所选择的符号映射方式");
 end
 
-fprintf("message_rec"); disp(message_rec);
+fprintf("message_rec(1:16)"); disp(message_rec(1:16));
 figure(2); stem(message_rec ~= message); title("传输总过程中的误码图案");
