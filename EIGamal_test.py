@@ -1,6 +1,5 @@
-from random import randrange
+import random
 from EIGamal_get_param import EIGamal_get_param
-from GetPrime import GetPrime
 from EIGamal_decode import EIGamal_decode
 from EIGamal_encode import EIGamal_encode
 import random
