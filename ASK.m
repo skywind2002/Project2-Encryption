@@ -11,7 +11,6 @@ function a_n = ASK(message, M)
             % 相当于 0映射到低电平0 1映射到高电平1
             a_n = message;
         case 2
-
             % QASK 注意Gray码 00-0 01-1 11-2 10-3
             gray_code_4 = [0, 1, 3, 2];
             int_n = message(1:log2(M):end) * 2 + message(2:log2(M):end) * 1;
@@ -28,6 +27,8 @@ function a_n = ASK(message, M)
             gray_code_16 = [0, 1, 3, 2, 7, 6, 4, 5, 15, 14, 12, 13, 8, 9, 11, 10];
             int_n = message(1:log2(M):end) * 8 + message(2:log2(M):end) * 4 + message(3:log2(M):end) * 2 + message(4:log2(M):end) * 1;
             a_n = gray_code_16(int_n + 1);
+        otherwise
+            assert(0, "没有相应的ASK映射方式")
     end
 
 end

@@ -4,8 +4,9 @@ clear;close all;clc;
 
 %% parameters
 SNR = 20; % 给定信噪比
-% TODO b_n -> a_n 的映射是可以调整的，也就是那些 MASK MPSK MQAM MFSK
-SK_way = 'QASK';
+% b_n -> a_n 的映射是可以调整的 MASK/MPSK
+SK_way = 'ASK';
+SK_M = 16;
 
 %% constants
 f_low = 300; omega_low = f_low * 2 * pi;
@@ -22,11 +23,11 @@ Rs = 1 / Ts;
 subplot_r = 4; subplot_c = 2; % subplot作图
 
 %% 【生成比特流】
-message = randi([0, 1], 1, 60); % message 要发送的比特序列
+message = randi([0, 1], 1, 1200); % message 要发送的比特序列
 
-if rem(length(message), 16) ~= 0
-    % 不是16的整数倍 补零
-    message = [message, repmat([0], 1, 16 - rem(length(message), 16))];
+if rem(length(message), 12) ~= 0
+    % 不是12的整数倍 补零
+    message = [message, repmat([0], 1, 12 - rem(length(message), 12))];
 end
 
 %% 【发送】
@@ -34,17 +35,16 @@ end
 % 符号调制
 % a_n 要发送的符号序列
 switch SK_way
-    case 'BASK'
-        a_n = SK_BASK(message);
-    case 'QASK'
-        a_n = SK_QASK(message);
+    case 'ASK'
+        a_n = ASK(message, SK_M);
+    case 'PSK'
     otherwise
         assert(0, "没有所选择的符号映射方式");
 end
 
 %% prefourier
 t_start = 0; t_end = Ts * length(a_n) * 1.2;
-precision_N = 3; precision = Ts / precision_N; % 时频信号MATLAB计算精度 % precision_N取3够用了
+precision_N = 16; precision = Ts / precision_N; % 时频信号MATLAB计算精度 % precision_N取3不太够用 当使用16ASK的时候 高信噪比下还是得提高精度
 omega_range = [-1.5 * omega_high, 1.5 * omega_high]; % 这里做频域分析，至少范围要大于 ±omega_high
 omega_N = 8000;
 t_range = [t_start, t_end];
@@ -132,11 +132,10 @@ end
 message_rec = zeros(1, length(a_n)); % message_rec 判决后得到的比特序列
 
 switch SK_way
-    case 'BASK'
-        message_rec = SKi_BASK(y_n);
-    case 'QASK'
-        % fprintf("y_n(1:16)"); disp(y_n(1:16));
-        message_rec = SKi_QASK(y_n);
+    case 'ASK'
+        message_rec = iASK(y_n, SK_M);
+    case 'PSK'
+        assert(0, "PSK还没做");
     otherwise
         assert(0, "没有所选择的符号映射方式");
 end
