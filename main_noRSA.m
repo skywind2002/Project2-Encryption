@@ -92,11 +92,14 @@ figure(1); subplot(subplot_r, subplot_c, 4);
 [P, f] = power_spectrum(s_t, precision, 1024);
 plot(f, 10 * log10(P)); xlabel("f/Hz"); legend("F(s(t))")
 
-%% 【升频】TODO 写成复数的形式 这样之后复数也可以直接用
-u_t = s_t .* cos(omega_0 * t);
+%% 【升频】写成复数的形式
+figure(3); subplot(3, 1, 1);
+plot(t(t < 20 * Ts), imag(s_t(t < 20 * Ts)));xlabel("t"); legend("s(t)");
+hold on; stem((1:20) * Ts - precision, imag(s_t((1:20) * precision_N))); hold off;
+u_t = s_t .* exp(1j * (omega_0 * t));
 
 %% 【信道传输】信道本身是带通 而且要附加噪声
-r_t = u_t;
+r_t = real(u_t);
 r_t = awgn(r_t, SNR, 'measured'); % awgn附加高斯噪声 信号能量由MATLAB计算得到
 
 figure(1); subplot(subplot_r, subplot_c, 5);
@@ -107,13 +110,20 @@ figure(1); subplot(subplot_r, subplot_c, 6);
 [P, f] = power_spectrum(r_t, precision, 1024);
 plot(f, 10 * log10(P)); xlabel("f/Hz"); legend("F(r(t))")
 
-%% 【降频】TODO 乘以cos再过理想低通 注意1/2系数？
-w_t = 2 * r_t .* cos(omega_0 * t); % 接受滤波器的根号升余弦就是低通了，这里不用过一次低通
+%% 【降频】乘以exp(jwt)再过理想低通
+w_t = 2 * r_t .* exp(-1j * (omega_0 * t)); % 接受滤波器的根号升余弦就是低通了，这里不用过一次低通
+figure(3); subplot(3, 1, 2);
+plot(t(t < 20 * Ts), imag(w_t(t < 20 * Ts)));xlabel("t"); legend("w(t)");
+hold on; stem((1:20) * Ts - precision, imag(w_t((1:20) * precision_N))); hold off;
 
 %% 【接收】
 y_t = upfirdn(w_t, t_raisedcos) / precision_N; % 用根号升余弦滤波，upfirdn 知道 t_raisedcos 的中间点对应 t=0，因此会在结果前后各引入多余的 (length(t_raisedcos) - 1) / 2 个点
 delay = (length(t_raisedcos) - 1) / 2;
 y_t = y_t(delay + 1:end - delay);
+
+figure(3); subplot(3, 1, 3);
+plot(t(t < 20 * Ts), imag(y_t(t < 20 * Ts)));xlabel("t"); legend("y(t)");
+hold on; stem((1:20) * Ts - precision, imag(y_t((1:20) * precision_N))); hold off;
 
 figure(1); subplot(subplot_r, subplot_c, 7);
 plot(t(t < 20 * Ts), y_t(t < 20 * Ts)); xlabel("t");
@@ -137,7 +147,7 @@ switch SK_way
     case 'ASK'
         message_rec = iASK(y_n, SK_M);
     case 'PSK'
-        message_rec = iASK(y_n, SK_M);
+        message_rec = iPSK(y_n, SK_M);
     otherwise
         assert(0, "没有所选择的符号映射方式");
 end
