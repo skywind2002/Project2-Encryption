@@ -3,10 +3,10 @@
 clear;close all;clc;
 
 %% parameters
-SNR = 20; % 给定信噪比
+SNR = 40; % 给定信噪比
 % b_n -> a_n 的映射是可以调整的 MASK/MPSK
-SK_way = 'ASK';
-SK_M = 16;
+SK_way = 'PSK';
+SK_M = 2;
 
 %% constants
 f_low = 300; omega_low = f_low * 2 * pi;
@@ -23,7 +23,7 @@ Rs = 1 / Ts;
 subplot_r = 4; subplot_c = 2; % subplot作图
 
 %% 【生成比特流】
-message = randi([0, 1], 1, 1200); % message 要发送的比特序列
+message = randi([0, 1], 1, 120); % message 要发送的比特序列
 
 if rem(length(message), 12) ~= 0
     % 不是12的整数倍 补零
@@ -38,6 +38,8 @@ switch SK_way
     case 'ASK'
         a_n = ASK(message, SK_M);
     case 'PSK'
+        r = 1;
+        a_n = PSK(message, SK_M, r);
     otherwise
         assert(0, "没有所选择的符号映射方式");
 end
@@ -135,7 +137,7 @@ switch SK_way
     case 'ASK'
         message_rec = iASK(y_n, SK_M);
     case 'PSK'
-        assert(0, "PSK还没做");
+        message_rec = iASK(y_n, SK_M);
     otherwise
         assert(0, "没有所选择的符号映射方式");
 end
