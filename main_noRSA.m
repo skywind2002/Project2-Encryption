@@ -5,8 +5,8 @@ clear;close all;clc;
 %% parameters
 SNR = 20; % 给定信噪比
 % b_n -> a_n 的映射是可以调整的 MASK/MPSK
-SK_way = 'ASK';
-SK_M = 4;
+SK_way = 'PSK';
+SK_M = 8;
 
 %% constants
 f_low = 300; omega_low = f_low * 2 * pi;
@@ -22,13 +22,13 @@ Rs = 1 / Ts;
 % 直接传比特也是可以的 但是加上卷积码或者检错码可能就不够了
 
 %% 作图
-subplot_r = 4; subplot_c = 3; % subplot作图
+subplot_r = 5; subplot_c = 3; % subplot作图
 frequency_range = [-1.5 * f_high, 1.5 * f_high];
 
 %% 【生成比特流】
-message = randi([0, 1], 1, 120); % message 要发送的比特序列
+message = randi([0, 1], 1, 8192); % message 要发送的比特序列
 
-if rem(length(message), 12) ~= 0
+if rem(length(message), 12) ~= 0 % 12 = 3 * 4 用4种进制数都可以
     % 不是12的整数倍 补零
     message = [message, repmat([0], 1, 12 - rem(length(message), 12))];
 end
@@ -51,7 +51,7 @@ end
 
 %% prefourier
 t_start = 0; t_end = Ts * length(a_n) * 1.2;
-precision_N = 16; precision = Ts / precision_N; % 时频信号MATLAB计算精度 % precision_N取3不太够用 当使用16ASK的时候 高信噪比下还是得提高精度
+precision_N = 8; precision = Ts / precision_N; % 时频信号MATLAB计算精度 % precision_N取3不太够用 当使用16ASK的时候 高信噪比下还是得提高精度
 omega_range = [-1.5 * omega_high, 1.5 * omega_high]; % 这里做频域分析，至少范围要大于 ±omega_high
 omega_N = 8000;
 t_range = [t_start, t_end];
@@ -104,18 +104,27 @@ plot(f, 10 * log10(P)); xlabel("f/Hz"); xlim(frequency_range); legend("F(s(t))")
 
 %% 【升频】写成复数的形式
 u_t = s_t .* exp(1j * (omega_0 * t));
+u_t = real(u_t);
+figure(1); subplot(subplot_r, subplot_c, 7);
+plot(t(t < 20 * Ts), real(u_t(t < 20 * Ts))); xlabel("t"); ylim(amplitude_range);
+hold on; stem((1:20) * Ts - precision, real(u_t((1:20) * precision_N))); hold off; legend("u(t)", "采样点");
+figure(1); subplot(subplot_r, subplot_c, 8);
+plot(t(t < 20 * Ts), imag(u_t(t < 20 * Ts))); xlabel("t"); ylim(amplitude_range);
+hold on; stem((1:20) * Ts - precision, imag(u_t((1:20) * precision_N))); hold off; legend("u(t)", "采样点");
+figure(1); subplot(subplot_r, subplot_c, 9);
+[P, f] = power_spectrum(u_t, precision, 1024);
+plot(f, 10 * log10(P)); xlabel("f/Hz"); xlim(frequency_range); legend("F(u(t))")
 
 %% 【信道传输】信道本身是带通 而且要附加噪声
-r_t = real(u_t);
-r_t = awgn(r_t, SNR, 'measured'); % awgn附加高斯噪声 信号能量由MATLAB计算得到
+r_t = awgn(u_t, SNR, 'measured'); % awgn附加高斯噪声 信号能量由MATLAB计算得到
 
-figure(1); subplot(subplot_r, subplot_c, 7);
+figure(1); subplot(subplot_r, subplot_c, 10);
 plot(t(t < 20 * Ts), real(r_t(t < 20 * Ts))); xlabel("t"); ylim(amplitude_range);
 hold on; stem((1:20) * Ts - precision, real(r_t((1:20) * precision_N))); hold off; legend("r(t)", "采样点");
-figure(1); subplot(subplot_r, subplot_c, 8);
+figure(1); subplot(subplot_r, subplot_c, 11);
 plot(t(t < 20 * Ts), imag(r_t(t < 20 * Ts))); xlabel("t"); ylim(amplitude_range);
 hold on; stem((1:20) * Ts - precision, imag(r_t((1:20) * precision_N))); hold off; legend("r(t)", "采样点");
-figure(1); subplot(subplot_r, subplot_c, 9);
+figure(1); subplot(subplot_r, subplot_c, 12);
 [P, f] = power_spectrum(r_t, precision, 1024);
 plot(f, 10 * log10(P)); xlabel("f/Hz"); xlim(frequency_range); legend("F(r(t))")
 
@@ -127,13 +136,13 @@ y_t = upfirdn(w_t, t_raisedcos) / precision_N; % 用根号升余弦滤波，upfi
 delay = (length(t_raisedcos) - 1) / 2;
 y_t = y_t(delay + 1:end - delay);
 
-figure(1); subplot(subplot_r, subplot_c, 10);
+figure(1); subplot(subplot_r, subplot_c, 13);
 plot(t(t < 20 * Ts), real(y_t(t < 20 * Ts))); xlabel("t"); ylim(amplitude_range);
 hold on; stem((1:20) * Ts - precision, real(y_t((1:20) * precision_N))); hold off; legend("y(t)", "采样点");
-figure(1); subplot(subplot_r, subplot_c, 11);
+figure(1); subplot(subplot_r, subplot_c, 14);
 plot(t(t < 20 * Ts), imag(y_t(t < 20 * Ts))); xlabel("t"); ylim(amplitude_range);
 hold on; stem((1:20) * Ts - precision, imag(y_t((1:20) * precision_N))); hold off; legend("y(t)", "采样点");
-figure(1); subplot(subplot_r, subplot_c, 12);
+figure(1); subplot(subplot_r, subplot_c, 15);
 [P, f] = power_spectrum(y_t, precision, 1024);
 plot(f, 10 * log10(P)); xlabel("f/Hz"); xlim(frequency_range); legend("F(y(t))")
 
