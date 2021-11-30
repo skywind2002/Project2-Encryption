@@ -192,7 +192,7 @@ switch SK_way
             message_rec = viterbi_decode(message_rec, n, k, m, A, viterbi_mode, p, distance); % 传入的message_rec是01序列
 
         else % soft
-            distance = @(z, y)(soft_distance_PSK(z, y, 2, SK_M));
+            distance = @(z, y)(sum(abs(PSK(y, SK_M, r) - z).^2, 2));
             message_rec = viterbi_decode(y_n, n, k, m, A, viterbi_mode, p, distance); % 注意 这里传入软判的序列是直接采样得到的实序列
             disp(length(message_rec))
         end
