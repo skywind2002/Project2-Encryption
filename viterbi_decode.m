@@ -13,13 +13,14 @@ function decode = viterbi_decode(r, n, k, m, A, mode, p)
     r = reshape(r, n, []); % 化为若干列，每一列都对应于 k 个原符号（共依赖于 m*k 个原符号）
 
     if (mode == 0) % Hard Viterbi
+        % Notice: 硬viterbi传入的应该是反格雷映射得到的01序列。
         distance = @(b, a)(hard_distance(b, a, 2));
     else % Soft Viterbi
         % WARNING: 这个函数只对作业二的情形（2ASK、实数信道）有效！
         distance = @(z, y)(soft_distance(z, y, 2));
     end
 
-    n_decode = size(r, 2) * k; % 最终输出的码流长度
+    % n_decode = size(r, 2) * k; % 最终输出的码流长度
 
     n_state = p^(m - 1); % 米利机状态数，p种情形在输入中，p^{m-1} 种情形在状态中
     state = dec2base(0:n_state - 1, p, m - 1) - '0'; % n_state * (m-1) 矩阵，每一行对应一个长度为 m-1 的状态
@@ -36,9 +37,10 @@ function decode = viterbi_decode(r, n, k, m, A, mode, p)
         full_state = [repmat(state, p, 1), full_input]; % 状态+假想输入得到的完整输入，第 k * n_state + s + 1 行表示第 s 个状态和第 k 个输入的组合
         raw_dis = repmat(total_dis, p, 1); % 每个 full_state 对应的原距离
         output = convs(n, k, m, A, full_state, p);
-        % disp("input"); disp(input); disp("output"); disp(output);
+        disp("i"); disp(i);
+        disp("input"); disp(input); disp("output"); disp(output);
         delta_dis = distance(input, output); % 实际的 input 和各个假想的 output 之间的距离
-        % disp("delta_dis"); disp(delta_dis)
+        disp("delta_dis"); disp(delta_dis)
         next_state = full_state(:, 2:end); % 各个状态在 try_input 的假想输入下对应的下一个状态
         next_state = base2dec(char(next_state + '0'), p) + 1; % 转换为索引，next_state 中各种状态应恰好出现 p 次
 
