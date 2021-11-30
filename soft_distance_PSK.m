@@ -6,6 +6,7 @@
 function d = soft_distance_PSK(z, y, p, M)
     % PSK
     r = 1;
+    y = f_binarray2int(y); % 将n列多行的01符号变为1列多行的十进制数
     y_complex = r * exp(1j * (y * (2 * pi / M) + 2 * pi / (2 * M)));
     d = sum(abs(z - y_complex).^2, 2);
 
