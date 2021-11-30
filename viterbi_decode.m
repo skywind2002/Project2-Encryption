@@ -35,8 +35,6 @@ function decode = viterbi_decode(r, n, k, m, A, mode, p, distance)
         full_state = [repmat(state, p, 1), full_input]; % 状态+假想输入得到的完整输入，第 k * n_state + s + 1 行表示第 s 个状态和第 k 个输入的组合
         raw_dis = repmat(total_dis, p, 1); % 每个 full_state 对应的原距离
         output = convs(n, k, m, A, full_state, p);
-        disp("i"); disp(i);
-        disp("input"); disp(angle(input) / 2 / pi * 8);
         % disp("output"); disp(output);
         delta_dis = distance(input, output); % 实际的 input 和各个假想的 output 之间的距离
         % disp("delta_dis"); disp(delta_dis')

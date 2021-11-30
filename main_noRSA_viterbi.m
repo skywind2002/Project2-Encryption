@@ -29,14 +29,12 @@ subplot_r = 5; subplot_c = 3; % subplot作图
 frequency_range = [-1.5 * f_high, 1.5 * f_high];
 
 %% 【生成比特流】
-message = [0 1 1 0 1 0 1 1 0 1 0 0 0 1 1 0 0 1 1 0 1 0 1];
-% message = randi([0, 1], 1, 24); % message 要发送的比特序列 8192
+message = randi([0, 1], 1, 8192); % message 要发送的比特序列 8192
 
-% FIXME debug结束把这段注释取了
-% if rem(length(message), 12) ~= 0 % 12 = 3 * 4 用4种进制数都可以
-%     % 不是12的整数倍 补零
-%     message = [message, repmat([0], 1, 12 - rem(length(message), 12))];
-% end
+if rem(length(message), 12) ~= 0 % 12 = 3 * 4 用4种进制数都可以
+    % 不是12的整数倍 补零
+    message = [message, repmat([0], 1, 12 - rem(length(message), 12))];
+end
 
 %% 【发送】
 %% 卷积码编码
