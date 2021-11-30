@@ -13,25 +13,10 @@ function decode = viterbi_decode(r, n, k, m, A, mode, p)
     r = reshape(r, n, []); % 化为若干列，每一列都对应于 k 个原符号（共依赖于 m*k 个原符号）
 
     if (mode == 0) % Hard Viterbi
-
         distance = @(b, a)(hard_distance(b, a, 2));
     else % Soft Viterbi
-        % TODO: 这里只用了8PSK 不清楚这个是不是和yxj写的不一样
-        radius = 1;
-
-        switch n
-            case 1
-                Gray_code = [0 1];
-                mapping = radius * exp(1j * pi * Gray_code);
-            case 2
-                Gray_code = [0 1 3 2];
-                mapping = radius * exp(1j * pi * (Gray_code + .5) / 2);
-            case 3
-                Gray_code = [0 1 3 2 7 6 4 5];
-                mapping = radius * exp(1j * pi * Gray_code / 4);
-        end
-
-        distance = @(z, y)(soft_distance(z, y, mapping, 2));
+        % WARNING: 这个函数只对作业二的情形（2ASK、实数信道）有效！
+        distance = @(z, y)(soft_distance(z, y, 2));
     end
 
     n_decode = size(r, 2) * k; % 最终输出的码流长度
