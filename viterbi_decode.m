@@ -6,19 +6,19 @@
 % A - 卷积参数，表示 m 个 k*n 的矩阵。如果有 m 个 k*n 的矩阵 A1, A2, ..., Am，如 m = 5，则可以调用 A = cat(3, A1, A2, A3, A4, A5); 得到这里的参数 A。
 % mode - 0: hard viterbi 1: soft viterbi
 % p - 有限域中的符号数
-function decode = viterbi_decode(r, n, k, m, A, mode, p)
+function decode = viterbi_decode(r, n, k, m, A, mode, p,distance)
 
     disp("r.length"); disp(length(r))
     r = [r, zeros(1, mod(-length(r), n))]; % 补零变成 n 的倍数
     r = reshape(r, n, []); % 化为若干列，每一列都对应于 k 个原符号（共依赖于 m*k 个原符号）
 
-    if (mode == 0) % Hard Viterbi
-        % Notice: 硬viterbi传入的应该是反格雷映射得到的01序列。
-        distance = @(b, a)(hard_distance(b, a, 2));
-    else % Soft Viterbi
-        % WARNING: 这个函数只对作业二的情形（2ASK、实数信道）有效！
-        distance = @(z, y)(soft_distance(z, y, 2));
-    end
+    % if (mode == 0) % Hard Viterbi
+    %     % Notice: 硬viterbi传入的应该是反格雷映射得到的01序列。
+    %     % distance = @(b, a)(hard_distance(b, a, 2));
+    % else % Soft Viterbi
+    %     % WARNING: 这个函数只对作业二的情形（MPSK、实数信道）有效！
+    %     distance = @(z, y)(soft_distance(z, y, 2));
+    % end
 
     % n_decode = size(r, 2) * k; % 最终输出的码流长度
 
@@ -37,10 +37,10 @@ function decode = viterbi_decode(r, n, k, m, A, mode, p)
         full_state = [repmat(state, p, 1), full_input]; % 状态+假想输入得到的完整输入，第 k * n_state + s + 1 行表示第 s 个状态和第 k 个输入的组合
         raw_dis = repmat(total_dis, p, 1); % 每个 full_state 对应的原距离
         output = convs(n, k, m, A, full_state, p);
-        disp("i"); disp(i);
-        disp("input"); disp(input); disp("output"); disp(output);
+        % disp("i"); disp(i);
+        % disp("input"); disp(input); disp("output"); disp(output);
         delta_dis = distance(input, output); % 实际的 input 和各个假想的 output 之间的距离
-        disp("delta_dis"); disp(delta_dis)
+        disp("delta_dis"); disp(delta_dis')
         next_state = full_state(:, 2:end); % 各个状态在 try_input 的假想输入下对应的下一个状态
         next_state = base2dec(char(next_state + '0'), p) + 1; % 转换为索引，next_state 中各种状态应恰好出现 p 次
 
@@ -62,6 +62,4 @@ function decode = viterbi_decode(r, n, k, m, A, mode, p)
     end
 
     decode = route(1, :);
-
-    % TODO: 编码时收尾的话要去尾零
 end

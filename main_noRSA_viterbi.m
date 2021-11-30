@@ -166,17 +166,22 @@ switch SK_way
     case 'PSK'
 
         if viterbi_mode == 0 % hard
+            distance = @(b, a)(hard_distance(b, a, 2));
             message_rec = iPSK(y_n, SK_M); % 注意 这一步将采样得到的实数接受序列变成了01比特流（对应卷积码编码结束后的conv_encoded_message）
-            message_rec = viterbi_decode(message_rec, n, k, m, A, viterbi_mode, p); % 传入的message_rec是01序列
-            message_rec = message_rec(1:length(message)); % 因为只使用收尾的所以要去掉尾零
+            message_rec = viterbi_decode(message_rec, n, k, m, A, viterbi_mode, p, distance); % 传入的message_rec是01序列
+
         else % soft
-            % TODO
-            disp("TODO")
+            distance = @(z, y)(soft_distance_PSK(z, y, 2, SK_M)); 
+            message_rec = viterbi_decode(y_n, n, k, m, A, viterbi_mode, p, distance); % 注意 这里传入软判的序列是直接采样得到的实序列
         end
 
     otherwise
         assert(0, "没有所选择的符号映射方式");
 end
 
+% 因为只使用收尾的所以要去掉尾零
+message_rec = message_rec(1:length(message));
+
 % fprintf("message_rec(1:16)"); disp(message_rec(1:16));
 figure(2); stem(message_rec ~= message); title("传输总过程中的误码图案");
+fprintf("BER = %f\n",sum(message_rec ~= message)/length(message))
