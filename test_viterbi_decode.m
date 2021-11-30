@@ -8,26 +8,32 @@ p = 2; % 有限域中的符号数 这里符号都是二元的
 viterbi_mode = 0; % ERROR: mode=1 soft viterbi
 
 x = [1 1 0 0 1 1 0 1 1 1 0 1];
-disp(x)
+disp("x"); disp(x);
 
 % 不收尾
 zero_end = 0;
 y = conv_encode(x, n, k, m, A, zero_begin, zero_end, p);
-% disp(y) % 11 10 10
+disp("y"); disp(y) % 11 10 10
 
 % e = rand(size(r)) < 0.1
 % r = r + e;
 r = y;
 decode = viterbi_decode(r, n, k, m, A, viterbi_mode, p);
-disp(decode) % ERROR: [1 0 0] 应该是 [1 1 0]
+disp("不收尾"); disp(decode);
 
 % 收尾
 zero_end = 1;
 y = conv_encode(x, n, k, m, A, zero_begin, zero_end, p);
-% disp(y) % 11 10 10 11 00
+disp("y"); disp(y) % 11 10 10 11 00
 
 % e = rand(size(r)) < 0.1;
 % r = r + e;
 r = y;
 decode = viterbi_decode(r, n, k, m, A, viterbi_mode, p);
-disp(decode)
+disp("收尾"); disp(decode);
+
+%% hard results
+% 1     1     0     0     1     1     0     1     1     1     0     1
+% 1     1     0     0     1     1     0     1     1     1     0     0
+% 1     1     0     0     1     1     0     1     1     1     0     1     0     0
+%% soft results

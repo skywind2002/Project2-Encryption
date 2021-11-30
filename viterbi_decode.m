@@ -8,16 +8,29 @@
 % p - 有限域中的符号数
 function decode = viterbi_decode(r, n, k, m, A, mode, p)
 
+    disp("r.length"); disp(length(r))
+    r = [r, zeros(1, mod(-length(r), n))]; % 补零变成 n 的倍数
+    r = reshape(r, n, []); % 化为若干列，每一列都对应于 k 个原符号（共依赖于 m*k 个原符号）
+
     if (mode == 0) % Hard Viterbi
-        r = [r, zeros(1, mod(-length(r), n))]; % 补零变成 n 的倍数
-        r = reshape(r, n, []); % 化为若干列，每一列都对应于 k 个原符号（共依赖于 m*k 个原符号）
 
         distance = @(b, a)(hard_distance(b, a, 2));
-    else
+    else % Soft Viterbi
         % TODO: 这里只用了8PSK 不清楚这个是不是和yxj写的不一样
-        Gray_code = [0 1 3 2 7 6 4 5];
-        r = 1;
-        mapping = r * exp(1j * pi * Gray_code / 4);
+        radius = 1;
+
+        switch n
+            case 1
+                Gray_code = [0 1];
+                mapping = radius * exp(1j * pi * Gray_code);
+            case 2
+                Gray_code = [0 1 3 2];
+                mapping = radius * exp(1j * pi * (Gray_code + .5) / 2);
+            case 3
+                Gray_code = [0 1 3 2 7 6 4 5];
+                mapping = radius * exp(1j * pi * Gray_code / 4);
+        end
+
         distance = @(z, y)(soft_distance(z, y, mapping, 2));
     end
 
@@ -38,7 +51,9 @@ function decode = viterbi_decode(r, n, k, m, A, mode, p)
         full_state = [repmat(state, p, 1), full_input]; % 状态+假想输入得到的完整输入，第 k * n_state + s + 1 行表示第 s 个状态和第 k 个输入的组合
         raw_dis = repmat(total_dis, p, 1); % 每个 full_state 对应的原距离
         output = convs(n, k, m, A, full_state, p);
+        % disp("input"); disp(input); disp("output"); disp(output);
         delta_dis = distance(input, output); % 实际的 input 和各个假想的 output 之间的距离
+        % disp("delta_dis"); disp(delta_dis)
         next_state = full_state(:, 2:end); % 各个状态在 try_input 的假想输入下对应的下一个状态
         next_state = base2dec(char(next_state + '0'), p) + 1; % 转换为索引，next_state 中各种状态应恰好出现 p 次
 
