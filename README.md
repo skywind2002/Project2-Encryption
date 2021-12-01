@@ -10,8 +10,8 @@ Project2 **安全编码与波形信道传输**
   - [1.3 高斯噪声叠加](#13-高斯噪声叠加)
   - [1.4 统计误比特率](#14-统计误比特率)
   - [1.5 卷积码的参数选择](#15-卷积码的参数选择)
-  - [1.6 信道编码](#16-信道编码)
-  - [1.7 卷积码接收](#17-卷积码接收)
+  - [1.6 信道编码 & 1.7 卷积码接收](#16-信道编码--17-卷积码接收)
+  - [1.7 卷积码接收误比特率统计](#17-卷积码接收误比特率统计)
 - [2 安全编码](#2-安全编码)
 
 # 0 波形信道传输模型
@@ -142,13 +142,73 @@ semilogy(SNR_array, BER_array, "o-"); xlabel("SNR (dB)"); ylabel("BER");
 
 > 引入卷积码，自行选择编码参数(效率)和调制参数，说明理由
 
-## 1.6 信道编码
+信道无码间串扰的最大传输速率为 $R_S \leq 2067\ \text{符号/s}$；希望的文件传输速率为$R_b \geq 1638\ \text{bit/s}$
+
+具体选择方式如下：
+
+```matlab
+SK_way = 'PSK'; SK_M = 8;
+n = log2(SK_M); k = 1; m = 4;
+% 注意这里n=2的话就选QPSK n=3的话就选8PSK 因为软解的话这两个值必须相同
+A = cat(3, [1 1 1], [1 0 1], [0 1 1], [1 1 1]);
+zero_begin = 1; % 从零状态开始
+zero_end = 1; % 收尾
+```
+
+最大传输的比特速率为 $R_{S_{max}} * log2(SK\_M) / n$，由于需要使用viterbi软解码，这里 $log2(SK\_M)$ 和 $n$ 的值是相同的，所以最大的传输比特速率为 $R_B = R_{S_{max}} = 2067\ \text{bit/s}$ 大于所需的传输文件需求。
+
+## 1.6 信道编码 & 1.7 卷积码接收
 
 > 编写相应的信道编码(含调制)，画出发射波形(细节)和功率谱，接收机入口信号波形和功率谱
+> 
+> 编写相应的接收机，完成从接收波形到最终信源比特的恢复
 
-## 1.7 卷积码接收
+与`1.1`类似，在符号映射前添加卷积码编码：
 
-> 编写相应的接收机，完成从接收波形到最终信源比特的恢复，统计硬判决和软判决的误比特率与 $E_b/n_0$ 的关系(注意 $E_b$ 是平均传输每个信源比特所需要的接收信号分量的能量)
+```matlab
+conv_encoded_message = conv_encode(message, n, k, m, A, zero_begin, zero_end, p);
+...
+a_n = PSK(conv_encoded_message, SK_M, r);
+```
+
+发射波形和功率谱与前面的没有很大的区别（其中`u(t)`为升频后实际发送的波形）：
+
+![](images/1.6-1.png)
+
+接收时则根据硬或软Viterbi选择不同的距离函数和判决方式：
+
+```matlab
+if viterbi_mode == 0 % hard
+    distance = @(b, a)(hard_distance(b, a, 2));
+    message_rec = iPSK(y_n, SK_M); % 注意 这一步将采样得到的实数接受序列变成了01比特流（对应卷积码编码结束后的conv_encoded_message）
+    message_rec = viterbi_decode(message_rec, n, k, m, A, viterbi_mode, p, distance); % 传入的message_rec是01序列
+
+else % soft
+    distance = @(z, y)(sum(abs(PSK(y, SK_M, r) - z).^2, 2));
+    message_rec = viterbi_decode(y_n, n, k, m, A, viterbi_mode, p, distance); % 注意 这里传入软判的序列是直接采样得到的实序列
+    disp(length(message_rec))
+end
+```
+
+由于前面使用收尾的方式，最后要去尾零：
+
+```matlab
+message_rec = message_rec(1:length(message));
+```
+
+最终得到的`message_rec`即为Viterbi解码后的码流
+
+## 1.7 卷积码接收误比特率统计
+
+> 统计硬判决和软判决的误比特率与 $E_b/n_0$ 的关系(注意 $E_b$ 是平均传输每个信源比特所需要的接收信号分量的能量)
+
+与`1.4`类似，运行`main_noRSA_1_7_analysis.m`，修改其中的 `viterbi_mode = 0; % 0 hard 1 soft`，每个点跑5次取平均，得到下图：
+
+![](images/1.7-hard.png)
+
+![](images/1.7-soft.png)
+
+可以看到软解的误比特率约比硬解的小一个量级。
 
 # 2 安全编码
 

@@ -3,10 +3,10 @@
 clear;close all;clc;
 
 DRAW_FIGURES = 0;
-DEBUG = 1;
+DEBUG = 0;
 
 %% parameters
-SNR = 100; % 给定信噪比
+SNR = -7; % 给定信噪比
 % b_n -> a_n 的映射是可以调整的 MASK/MPSK
 SK_way = 'PSK';
 SK_M = 8;
