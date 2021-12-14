@@ -233,9 +233,8 @@ message_rec = message_rec(1:length(message));
 
 * DES算法：
 
-  算法极其复杂，在此之提供流程图：
+  算法极其复杂，在此只提供流程图(在文件夹里)
 
-  ![img](https://gimg2.baidu.com/image_search/src=http%3A%2F%2Fimg3.coin163.com%2F95%2F20%2FQfAfYn.jpg&refer=http%3A%2F%2Fimg3.coin163.com&app=2002&size=f9999,10000&q=a80&n=0&g=0n&fmt=jpeg?sec=1640956956&t=bffbf5c482d805e9013e5a32fc365fff)
 
 **安全、信道编码联调**:
 
