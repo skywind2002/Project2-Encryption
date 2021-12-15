@@ -15,7 +15,7 @@ end
 
 % 【加密】
 system("python RSA.py G 1025");
-sercret = zeros(1, (1024 + 1) * 8);
+secret = zeros(1, (1024 + 1) * 8);
 
 for i = 0:7
     f_mes = fopen('./data/message.txt', 'w');

@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-  
+
 """
 功能：生成 RSA 秘钥、利用秘钥对明文进行加密和解密。
 使用方法：python RSA.py G/E/D [<len>/PU/PR]
