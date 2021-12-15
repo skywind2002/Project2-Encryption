@@ -5,16 +5,17 @@ clear;close all;clc;
 %% parameters
 message_length = 8192;
 % 令SNR为0得到 Ebno = 0.3784
-%Ebn0_array = [0.001, 0.01:0.01:0.3, 0.4];
-Ebn0_array = [5];
+Ebn0_array = [0.15:0.01:0.45];
+%Ebn0_array = [5];
 SNR_array = 10 * log10(message_length / 3100 * Ebn0_array); % 给定信噪比
 disp("SNR_array"); disp(SNR_array);
 BER_array = zeros(1, length(Ebn0_array));
 
-experiment_times = 1;
+experiment_times = 5;
 
 DRAW_FIGURES = 0;
 DEBUG = 0;
+EncryptionOption=3;  %加密选择:1-RSA Others-DES
 
 for times = 1:experiment_times
     fprintf("\ntimes = %d\n", times);
@@ -46,32 +47,41 @@ for times = 1:experiment_times
 
         %% 【生成比特流】
         %% TODO 加密message
-        message = randi([0, 1], 1, 8192+8); % message 要发送的比特序列 8192
-        
-%         if rem(length(message), 12) ~= 0 % 12 = 3 * 4 用4种进制数都可以
-%             % 不是12的整数倍 补零
-%             message = [message, repmat([0], 1, 12 - rem(length(message), 12))];
-%         end
+        message = randi([0, 1], 1, 8192); % message 要发送的比特序列 8192bit
 
-        for i = 0:7
-            % 在每一块的开头添加1bit 0来保证RSA算法运行的正确性(message<n=pq)
-            message(i * (1024 + 1) + 1) = 0; 
-        end
-        
-        % 【加密】
-        system("python RSA.py G 1025");
-        secret = zeros(1, (1024 + 1) * 8);
-        
-        for i = 0:7
-            f_mes = fopen('./data/message.txt', 'w');
-            f_sec = fopen('./data/secret.txt', 'r');
-            fprintf("加密中……正在加密第 %d/%d 块\n", i + 1, 8)
-            fwrite(f_mes, char(message(i * (1024 + 1) + 1:i * (1024 + 1) + (1024 + 1)) + '0')); % 将行向量比特流 message 写入明文文件
-            system("python RSA.py E PU");
-            secret(i * (1024 + 1) + 1:i * (1024 + 1) + (1024 + 1)) = fread(f_sec) - '0'; % 从密文文件读回加密比特流
-            fclose(f_mes); fclose(f_sec);
-        end
+        if (EncryptionOption==1)   % RSA加解密
+            message=[message,0,0,0,0,0,0,0,0];  %多八位
 
+            for i = 0:7
+                % 在每一块的开头添加1bit 0来保证RSA算法运行的正确性(message<n=pq)
+                message(i * (1024 + 1) + 1) = 0; 
+            end
+        
+            % 【加密】
+            system("python RSA.py G 1025");
+            secret = zeros(1, (1024 + 1) * 8);
+        
+            for i = 0:7
+                f_mes = fopen('./data/message.txt', 'w');
+                f_sec = fopen('./data/secret.txt', 'r');
+                fprintf("加密中……正在加密第 %d/%d 块\n", i + 1, 8)
+                fwrite(f_mes, char(message(i * (1024 + 1) + 1:i * (1024 + 1) + (1024 + 1)) + '0')); % 将行向量比特流 message 写入明文文件
+                system("python RSA.py E PU");
+                secret(i * (1024 + 1) + 1:i * (1024 + 1) + (1024 + 1)) = fread(f_sec) - '0'; % 从密文文件读回加密比特流
+                fclose(f_mes); fclose(f_sec);
+            end
+        else  % DES加解密
+            DES_get_param;
+            key=(randi([0,1],1,64)>0.5);  % 随机生成key 64bit
+            secret=zeros(1,64*128);
+            for i=0:127
+                SubMessage=message(i*64+1:(i+1)*64);
+                SubKeyList=DES_get_key(key,KeyTable1,KeyTable2);
+                SubSecret=DES_encode(SubMessage,SubKeyList,IPTable,IPInvTable,Ext_Table,S,P_table);
+                secret(i*64+1:(i+1)*64)=SubSecret;
+            end
+            fprintf("加密完成!\n");
+        end
 
         %% 【发送】
         %% 卷积码编码
@@ -243,15 +253,25 @@ for times = 1:experiment_times
         secret_2 = message_rec;
         message_2 = zeros(size(secret_2));
 
-        for i = 0:7
-            fprintf("解密中……正在解密第 %d/%d 块\n", i + 1, 8)
-            f_mes = fopen('./data/message.txt', 'r');
-            f_sec = fopen('./data/secret.txt', 'w');
-            fwrite(f_sec, char(secret_2(i * (1024 + 1) + 1:i * (1024 + 1) + (1024 + 1)) + '0'));
-            system("python RSA.py D PR");
-            message_2(i * (1024 + 1) + 1:i * (1024 + 1) + (1024 + 1)) = fread(f_mes) - '0';
-            fclose(f_mes); fclose(f_sec);
+        if (EncryptionOption==1)  % RSA解密
+            for i = 0:7
+                fprintf("解密中……正在解密第 %d/%d 块\n", i + 1, 8)
+                f_mes = fopen('./data/message.txt', 'r');
+                f_sec = fopen('./data/secret.txt', 'w');
+                fwrite(f_sec, char(secret_2(i * (1024 + 1) + 1:i * (1024 + 1) + (1024 + 1)) + '0'));
+                system("python RSA.py D PR");
+                message_2(i * (1024 + 1) + 1:i * (1024 + 1) + (1024 + 1)) = fread(f_mes) - '0';
+                fclose(f_mes); fclose(f_sec);
+            end
+        else
+            for i=0:127
+                SubSecret=secret_2(i*64+1:(i+1)*64);
+                SubMessage=DES_decode(SubSecret,SubKeyList,IPTable,IPInvTable,Ext_Table,S,P_table);
+                message_2(i*64+1:(i+1)*64)=SubMessage;
+            end
+            fprintf("解密完成!\n");
         end
+
         if DRAW_FIGURES
             figure;
             subplot(2, 1, 1); plot(secret ~= secret_2); xlabel("密文误码图案")
@@ -262,7 +282,7 @@ for times = 1:experiment_times
         % figure(2); stem(message_rec ~= message); title("传输总过程中的误码图案");
         % fprintf("BER = %f\n", sum(message_rec ~= message) / length(message))
 
-        BER = sum(message_rec ~= message) / message_length;
+        BER = sum(message_2 ~= message) / message_length;
         BER_array(kkk) = BER_array(kkk) + BER;
         fprintf("Eb/n0 = %f; ", Ebn0_array(kkk))
         fprintf("SNR = %f; ", SNR)
