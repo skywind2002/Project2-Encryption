@@ -5,8 +5,8 @@ clear;close all;clc;
 %% parameters
 message_length = 8192;
 % 令SNR为0得到 Ebno = 0.3784
-% Ebn0_array = [0.001, 0.01:0.01:0.3, 0.4];
-Ebn0_array = [0.3];
+%Ebn0_array = [0.001, 0.01:0.01:0.3, 0.4];
+Ebn0_array = [5];
 SNR_array = 10 * log10(message_length / 3100 * Ebn0_array); % 给定信噪比
 disp("SNR_array"); disp(SNR_array);
 BER_array = zeros(1, length(Ebn0_array));
@@ -46,12 +46,12 @@ for times = 1:experiment_times
 
         %% 【生成比特流】
         %% TODO 加密message
-        message = randi([0, 1], 1, 8192); % message 要发送的比特序列 8192
+        message = randi([0, 1], 1, 8192+8); % message 要发送的比特序列 8192
         
-        if rem(length(message), 12) ~= 0 % 12 = 3 * 4 用4种进制数都可以
-            % 不是12的整数倍 补零
-            message = [message, repmat([0], 1, 12 - rem(length(message), 12))];
-        end
+%         if rem(length(message), 12) ~= 0 % 12 = 3 * 4 用4种进制数都可以
+%             % 不是12的整数倍 补零
+%             message = [message, repmat([0], 1, 12 - rem(length(message), 12))];
+%         end
 
         for i = 0:7
             % 在每一块的开头添加1bit 0来保证RSA算法运行的正确性(message<n=pq)
@@ -252,10 +252,11 @@ for times = 1:experiment_times
             message_2(i * (1024 + 1) + 1:i * (1024 + 1) + (1024 + 1)) = fread(f_mes) - '0';
             fclose(f_mes); fclose(f_sec);
         end
-
-        figure;
-        subplot(2, 1, 1); plot(secret ~= secret_2); xlabel("密文误码图案")
-        subplot(2, 1, 2); plot(message ~= message_2); xlabel("明文误码图案")
+        if DRAW_FIGURES
+            figure;
+            subplot(2, 1, 1); plot(secret ~= secret_2); xlabel("密文误码图案")
+            subplot(2, 1, 2); plot(message ~= message_2); xlabel("明文误码图案")
+        end
 
         % % fprintf("message_rec(1:16)"); disp(message_rec(1:16));
         % figure(2); stem(message_rec ~= message); title("传输总过程中的误码图案");
