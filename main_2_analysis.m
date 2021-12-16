@@ -5,17 +5,17 @@ clear;close all;clc;
 %% parameters
 message_length = 8192;
 % 令SNR为0得到 Ebno = 0.3784
-Ebn0_array = [0.15:0.01:0.45];
+Ebn0_array = [0.3];
 %Ebn0_array = [5];
 SNR_array = 10 * log10(message_length / 3100 * Ebn0_array); % 给定信噪比
 disp("SNR_array"); disp(SNR_array);
 BER_array = zeros(1, length(Ebn0_array));
 
-experiment_times = 5;
+experiment_times = 1;
 
-DRAW_FIGURES = 0;
+DRAW_FIGURES = 1;
 DEBUG = 0;
-EncryptionOption=3;  %加密选择:1-RSA Others-DES
+EncryptionOption=2;  %加密选择:1-RSA Others-DES
 
 for times = 1:experiment_times
     fprintf("\ntimes = %d\n", times);
@@ -293,6 +293,7 @@ end
 
 BER_array = BER_array / experiment_times;
 
+figure;
 subplot(1, 2, 1);
 loglog(Ebn0_array, BER_array, "x-"); xlabel("E_b/n_0"); ylabel("BER");
 subplot(1, 2, 2);

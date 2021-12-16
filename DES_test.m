@@ -21,3 +21,5 @@ SubKeyList=DES_get_key(key,KeyTable1,KeyTable2);
 secret=DES_encode(message,SubKeyList,IPTable,IPInvTable,Ext_Table,S,P_table);
 message1=DES_decode(secret,SubKeyList,IPTable,IPInvTable,Ext_Table,S,P_table);
 diff=(sum(message~=message1));  %这个值为0代表加密成功
+fprintf("明文与解密密文汉明距离为:");
+disp(diff);
